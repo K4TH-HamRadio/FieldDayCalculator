@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ARRL Field Day Category Calculator</title>
+  <title>ARRL Field Day Category & Points Calculator</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 700px;
+      max-width: 800px;
       margin: 20px auto;
       padding: 20px;
       background: #f8f8f8;
@@ -26,6 +26,10 @@
       padding: 8px;
       margin-top: 4px;
     }
+    .checkbox-label {
+      display: block;
+      margin-top: 10px;
+    }
     .output {
       margin-top: 20px;
       padding: 15px;
@@ -40,7 +44,7 @@
   </style>
 </head>
 <body>
-  <h1>ARRL Field Day Category Calculator</h1>
+  <h1>ARRL Field Day Category & Points Calculator</h1>
 
   <label for="transmitters">Number of Simultaneous Transmitters:</label>
   <input type="number" id="transmitters" min="1" max="20" value="1">
@@ -61,47 +65,84 @@
     <option value="F">F – Emergency Operations Center (EOC)</option>
   </select>
 
-  <label><input type="checkbox" id="gota"> GOTA (Get On The Air) Station</label>
-  <label><input type="checkbox" id="public"> Public Location / Public Info Table</label>
+  <label for="powerLevel">Transmitter Power Level:</label>
+  <select id="powerLevel">
+    <option value="low">≤150W (Low Power)</option>
+    <option value="high">>150W (High Power)</option>
+    <option value="qrp">QRP (≤5W)</option>
+  </select>
+
+  <label for="cw">CW QSOs:</label>
+  <input type="number" id="cw" min="0" value="0">
+
+  <label for="digital">Digital QSOs:</label>
+  <input type="number" id="digital" min="0" value="0">
+
+  <label for="phone">Phone QSOs:</label>
+  <input type="number" id="phone" min="0" value="0">
+
+  <label for="gotaQSOs">GOTA QSOs (Max 500):</label>
+  <input type="number" id="gotaQSOs" min="0" max="500" value="0">
+
+  <div class="checkbox-label"><input type="checkbox" id="gota"> GOTA Station Active</div>
+  <div class="checkbox-label"><input type="checkbox" id="public"> Public Info Table</div>
+  <div class="checkbox-label"><input type="checkbox" id="natural"> Natural Power QSOs (5 min)</div>
+  <div class="checkbox-label"><input type="checkbox" id="message"> Message Sent to SEC/SM</div>
+  <div class="checkbox-label"><input type="checkbox" id="satellite"> Made 1 Satellite QSO</div>
+  <div class="checkbox-label"><input type="checkbox" id="youth"> Youth Operator Participated</div>
+  <div class="checkbox-label"><input type="checkbox" id="media"> Media Publicity Achieved</div>
 
   <div class="output" id="result">
     <h2>Category: —</h2>
     <p>Point Multiplier: —</p>
+    <p>Total QSO Points: —</p>
     <p>Bonuses: —</p>
+    <p>Estimated Final Score: —</p>
   </div>
 
   <script>
-    const transmitters = document.getElementById("transmitters");
-    const powerSource = document.getElementById("powerSource");
-    const stationClass = document.getElementById("stationClass");
-    const gota = document.getElementById("gota");
-    const publicBox = document.getElementById("public");
-    const result = document.getElementById("result");
-
     function update() {
-      const tx = Math.max(1, parseInt(transmitters.value));
-      const pwr = powerSource.value;
-      const cls = stationClass.value;
+      const tx = Math.max(1, parseInt(document.getElementById("transmitters").value));
+      const pwr = document.getElementById("powerSource").value;
+      const cls = document.getElementById("stationClass").value;
+      const powerLevel = document.getElementById("powerLevel").value;
+      const cw = parseInt(document.getElementById("cw").value);
+      const digital = parseInt(document.getElementById("digital").value);
+      const phone = parseInt(document.getElementById("phone").value);
+      const gotaQSOs = parseInt(document.getElementById("gotaQSOs").value);
+
+      const bonuses = [];
+      let bonusPoints = 0;
+
+      if (document.getElementById("gota").checked && gotaQSOs > 0) {
+        bonuses.push("GOTA Station (Up to 500 QSOs)");
+        bonusPoints += 100;
+      }
+      if (document.getElementById("public").checked) { bonuses.push("Public Info Table"); bonusPoints += 100; }
+      if (document.getElementById("natural").checked) { bonuses.push("Natural Power QSO"); bonusPoints += 100; }
+      if (document.getElementById("message").checked) { bonuses.push("Message Sent to SEC/SM"); bonusPoints += 100; }
+      if (document.getElementById("satellite").checked) { bonuses.push("Satellite Contact"); bonusPoints += 100; }
+      if (document.getElementById("youth").checked) { bonuses.push("Youth Operator"); bonusPoints += 20; }
+      if (document.getElementById("media").checked) { bonuses.push("Media Publicity"); bonusPoints += 100; }
+
       const category = `${tx}${cls}`;
 
       let multiplier = 1;
-      if (pwr === "emergency") multiplier = 2;
+      if (pwr === "emergency" && powerLevel !== "high") multiplier = 2;
 
-      const bonuses = [];
-      if (gota.checked) bonuses.push("GOTA Station (+Bonus)");
-      if (publicBox.checked) bonuses.push("Public Info / Location (+Bonus)");
+      const qsoPoints = (cw + digital) * 2 + phone * 1 + Math.min(500, gotaQSOs);
+      const totalScore = (qsoPoints * multiplier) + bonusPoints;
 
-      result.innerHTML = `
+      document.getElementById("result").innerHTML = `
         <h2>Category: ${category}</h2>
         <p>Point Multiplier: ${multiplier}x</p>
-        <p>Bonuses: ${bonuses.length ? bonuses.join(", ") : "None"}</p>
+        <p>Total QSO Points: ${qsoPoints}</p>
+        <p>Bonuses: ${bonuses.length ? bonuses.join(", ") : "None"} (+${bonusPoints})</p>
+        <p><strong>Estimated Final Score: ${totalScore}</strong></p>
       `;
     }
 
-    [transmitters, powerSource, stationClass, gota, publicBox].forEach(el => {
-      el.addEventListener("input", update);
-    });
-
+    document.querySelectorAll("input, select").forEach(el => el.addEventListener("input", update));
     update();
   </script>
 </body>
